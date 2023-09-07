@@ -1,2 +1,5 @@
 # iemapps
-IEM Apps backed by ISU SSO
+
+Applications that are generally protected by ISU SSO.
+
+[Website](https://iemapps.agron.iastate.edu)
