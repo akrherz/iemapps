@@ -23,5 +23,5 @@ PAGE = """
 def application(envion, start_response):
     """Do something"""
     start_response("200 OK", [("Content-type", "text/html")])
-    res = PAGE % {'user': envion['REMOTE_USER']}
+    res = PAGE % {"user": envion["REMOTE_USER"]}
     return [res.encode("ascii")]
