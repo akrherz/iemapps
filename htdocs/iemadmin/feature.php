@@ -9,7 +9,7 @@ require_once "/opt/iem/config/settings.inc.php";
 require_once "/opt/iem/include/database.inc.php";
 require_once "/opt/iem/include/myview.php";
 require_once "/opt/iem/include/forms.php";
-require_once "/opt/iem/include/html2text.php";
+require_once "../../include/html2text.php";
 require_once "../../include/Facebook/autoload.php";
 
 $msgs = array();
