@@ -1,5 +1,4 @@
 """Generate a NLDN Gibson Ridge Placefile for ISU research usage."""
-from datetime import datetime, timezone
 
 from pyiem.webutil import iemapp
 
@@ -20,18 +19,11 @@ def gen_strikes(cursor, sts, ets):
         )
 
 
-@iemapp(iemdb="nldn", parse_times=False, iemdb_cursorname="nldn")
+@iemapp(iemdb="nldn", iemdb_cursorname="nldn")
 def application(environ, start_response):
     """WSGI application."""
-    fmt = (
-        "%Y-%m-%dT%H:%M:%SZ"
-        if len(environ["sts"]) == 20
-        else "%Y-%m-%dT%H:%MZ"
-    )
-    sts = datetime.strptime(environ["sts"], fmt)
-    sts = sts.replace(tzinfo=timezone.utc)
-    ets = datetime.strptime(environ["ets"], fmt)
-    ets = ets.replace(tzinfo=timezone.utc)
+    sts = environ["sts"]
+    ets = environ["ets"]
     content = f"""
 Title: NLDN {sts} to {ets}
 Color: 255 255 255
