@@ -1,0 +1,3 @@
+dependencies:
+  # NB: these are requirements of code in this repo
+  - pyiem

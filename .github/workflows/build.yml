@@ -1,7 +1,17 @@
 name: Install and Test
-on: [push, pull_request]
+on:
+    pull_request:
+      branches:
+        - main
+    push:
+      branches:
+        - main
 jobs:
   build-linux:
+    defaults:
+      run:
+        # Ensures environment gets sourced right
+        shell: bash -l {0}
     name: Python (${{ matrix.PYTHON_VERSION }})
     runs-on: ubuntu-latest
     strategy:
@@ -16,13 +26,36 @@ jobs:
       run: |
         cat .github/workflows/etchosts.txt | sudo tee -a /etc/hosts
 
-    - name: Setup CI from ci-tooling
+    # setup conda-forge with micromamba
+    - name: Setup Python
+      uses: mamba-org/setup-micromamba@v1
+      with:
+        environment-file: environment.yml
+        condarc: |
+          channels:
+            - conda-forge
+            - defaults
+        create-args: >-
+          python=${{ env.PYTHON_VERSION }}
+        environment-name: prod
+        cache-environment: true
+
+    # Get postgresql running and setup the database
+    - name: Setup Postgres
       run: |
         set -e
         git clone --depth 1 https://github.com/akrherz/iem-database.git database
         git clone --depth 1 https://github.com/akrherz/ci_tooling.git .ci_tooling
         cd .ci_tooling
         . postgres.sh
-        . iemwebfarm.sh
         cd ..
-        sudo mkdir -p /mesonet/www/logs
+        cd database; sh bootstrap.sh
+        python schema_manager.py
+
+    # Get apache running, which is needed to build mod_wsgi
+    - name: Configure IEM Webfarm Server
+      run: |
+        set -e
+        cd .ci_tooling
+        . iemwebfarm.sh
+
