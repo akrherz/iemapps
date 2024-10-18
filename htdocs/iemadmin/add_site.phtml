@@ -63,9 +63,11 @@ if (isset($_REQUEST["longitude"]) && isset($_REQUEST["latitude"])) {
     if (!$found) {
         $msg .= "<h3>Creating new database entry for this station...</h3>";
         $sql = sprintf(
-            "INSERT into stations (id, network) values ('%s','%s')",
+            "INSERT into stations (id, network, online, metasite) values ('%s','%s', '%s', '%s')",
             $station,
-            $network
+            $network,
+            $online,
+            $metasite
         );
         pg_exec($pgconn, $sql);
     }
