@@ -41,7 +41,7 @@ def gen_strikes(cursor, sts, ets):
     )
     for row in cursor:
         yield (
-            f'Icon: {row["y"]:.4f}, {row["x"]:.4f}, 0, 1, 1, '
+            f"Icon: {row['y']:.4f}, {row['x']:.4f}, 0, 1, 1, "
             f'"{row["v"]:%H:%M:%S} UTC"\n'
         )
 
@@ -60,7 +60,7 @@ Color: {r} {g} {b}
 IconFile: 1, 32, 32, 16, 16, "http://www.meteor.iastate.edu/~jpatton/lightning_icon.png"
 Font: 1, 9, 0, "Courier New"
 
-{''.join(gen_strikes(environ['iemdb.nldn.cursor'], sts, ets))}
+{"".join(gen_strikes(environ["iemdb.nldn.cursor"], sts, ets))}
     """
     start_response("200 OK", [("Content-type", "text/plain")])
     return [content.encode("ascii")]

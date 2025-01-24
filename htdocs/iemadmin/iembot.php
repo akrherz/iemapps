@@ -1,7 +1,7 @@
 <?php
 require_once "/opt/iem/config/settings.inc.php";
 require_once "/opt/iem/include/database.inc.php";
-require_once "/opt/iem/include/myview.php";
+require_once "../../include/myview.php";
 $t = new MyView();
 
 $dbconn = iemdb("mesosite");
@@ -180,4 +180,4 @@ $t->content = <<<EOF
 </table>
 
 EOF;
-$t->render('single.phtml');
+$t->render('full.phtml');
