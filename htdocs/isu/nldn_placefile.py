@@ -27,26 +27,32 @@ Parameters
 
 """
 
+from datetime import datetime
+
+from pyiem.database import sql_helper, with_sqlalchemy_conn
 from pyiem.webutil import iemapp
 
 
-def gen_strikes(cursor, sts, ets):
+@with_sqlalchemy_conn("nldn")
+def gen_strikes(sts: datetime, ets: datetime, conn=None) -> str:
     """Do the work."""
-    cursor.execute(
-        """
+    res = conn.execute(
+        sql_helper("""
         SELECT st_x(geom) as x, st_y(geom) as y, valid at time zone 'UTC' as v
-        from nldn_all WHERE valid BETWEEN %s and %s
-    """,
-        (sts, ets),
+        from nldn_all WHERE valid BETWEEN :sts and :ets
+    """),
+        {"sts": sts, "ets": ets},
     )
-    for row in cursor:
-        yield (
-            f"Icon: {row['y']:.4f}, {row['x']:.4f}, 0, 1, 1, "
-            f'"{row["v"]:%H:%M:%S} UTC"\n'
+    text = ""
+    for row in res:
+        text += (
+            f"Icon: {row[1]:.4f}, {row[0]:.4f}, 0, 1, 1, "
+            f'"{row[2]:%H:%M:%S} UTC"\n'
         )
+    return text
 
 
-@iemapp(iemdb="nldn", iemdb_cursorname="nldn", help=__doc__)
+@iemapp(help=__doc__)
 def application(environ, start_response):
     """WSGI application."""
     sts = environ["sts"]
@@ -60,7 +66,7 @@ Color: {r} {g} {b}
 IconFile: 1, 32, 32, 16, 16, "http://www.meteor.iastate.edu/~jpatton/lightning_icon.png"
 Font: 1, 9, 0, "Courier New"
 
-{"".join(gen_strikes(environ["iemdb.nldn.cursor"], sts, ets))}
+{gen_strikes(sts, ets)}
     """
     start_response("200 OK", [("Content-type", "text/plain")])
     return [content.encode("ascii")]
