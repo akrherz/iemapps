@@ -13,30 +13,30 @@ $tags = isset($_REQUEST["tags"]) ? explode(",", $_REQUEST["tags"]) : array();
 
 $msg = "";
 if (strlen($title) > 0) {
-    $conn = iemdb("mesosite", TRUE, TRUE);
-    $rs = pg_prepare($conn, "INJECTOR", "INSERT into 
+    $conn = iemdb("mesosite");
+    $stname = iem_pg_prepare($conn, "INSERT into 
        news(body, author, title, url, tags) VALUES ($1,$2,$3,$4, $5)");
-    pg_execute($conn, "INJECTOR", array(
+    $rs = pg_execute($conn, $stname, array(
         str_replace("\r", "", $body),
         $author, $title, $url, "{" . join(",", $tags) . "}"
     ));
-    $msg = "Story entered!";
+    if ($rs) {
+        $msg = "Story entered!";
+    } else {
+        $msg = "Error: " . pg_last_error($conn);
+    }
 }
 
 $t->title = "Add News Item";
 
-$t->jsextra = "
-<script>
-$('#testhtml').click(function(){
-    $('#testhtml_target').html($('#story').val());
-});
-</script>
-";
+$t->jsextra = '<script src="add_news.js"></script>';
 
 
 $t->content = <<<EOF
 
 <p><a href="/iemadmin/">Back to IEM Administration</a></p>
+
+<div class="alert alert-info">{$msg}</div>
 
 <form method="POST" action="add_news.phtml" name='news'>
 
