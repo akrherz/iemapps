@@ -67,7 +67,7 @@ if (isset($_REQUEST["longitude"]) && isset($_REQUEST["latitude"])) {
             $pgconn,
             <<<EOM
     INSERT into stations (id, network, online, metasite)
-    values ($1, $2, $3, $4),
+    values ($1, $2, $3, $4)
 EOM
         );
         pg_execute($pgconn, $stname, array(
