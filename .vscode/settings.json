@@ -1,0 +1,10 @@
+{
+    "intelephense.environment.includePaths": [
+        "/opt/iem/include",
+        "./include"
+    ],
+    "intelephense.files.exclude": [
+        "**/.git/**",
+        "**/vendor/**"
+    ]
+}
