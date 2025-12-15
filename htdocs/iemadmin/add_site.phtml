@@ -1,5 +1,4 @@
 <?php
-//Add/Edit a site to the IEM Database 
 require_once "/opt/iem/config/settings.inc.php";
 require_once "/opt/iem/include/database.inc.php";
 
@@ -41,12 +40,14 @@ if (isset($_REQUEST["longitude"]) && isset($_REQUEST["latitude"])) {
     // See if this station exists
     $msg .= "<h3>Current Entries with ID: $station</h3>";
     $msg .= "<table><tr><th>IEMID</th><th>Network</th><th>Name</th></tr>";
-    $rs = pg_exec(
+    $stname = iem_pg_prepare(
         $pgconn,
-        sprintf(
-            "SELECT iemid, network, name from stations WHERE id = '%s'",
-            $station
-        )
+        "SELECT iemid, network, name from stations WHERE id = $1"
+    );
+    $rs = pg_execute(
+        $pgconn,
+        $stname,
+        array($station)
     );
     $found = False;
     for ($i = 0; $row = pg_fetch_assoc($rs); $i++) {
@@ -62,50 +63,66 @@ if (isset($_REQUEST["longitude"]) && isset($_REQUEST["latitude"])) {
 
     if (!$found) {
         $msg .= "<h3>Creating new database entry for this station...</h3>";
-        $sql = sprintf(
-            "INSERT into stations (id, network, online, metasite) values ('%s','%s', '%s', '%s')",
+        $stname = iem_pg_prepare(
+            $pgconn,
+            <<<EOM
+    INSERT into stations (id, network, online, metasite)
+    values ($1, $2, $3, $4),
+EOM
+        );
+        pg_execute($pgconn, $stname, array(
             $station,
             $network,
             $online,
             $metasite
-        );
-        pg_exec($pgconn, $sql);
+        ));
     }
 
     $msg .= "<h3>Setting initial values for this site in database</h3>";
-    $sql = sprintf(
-        "UPDATE stations SET synop = null, country = '%s', 
-           plot_name = '%s', name = '%s', state = '%s', elevation = '%s', 
-           online = '%s', metasite = '%s', tzname = null, ncdc81 = null,
-           climate_site = null, county = null, ugc_county = null, ugc_zone = null,
-           geom = 'SRID=4326;POINT(%s %s)', ncei91 = null
-        WHERE id = '%s' and network = '%s'",
-        $country,
-        $sname,
-        $sname,
-        $state,
-        $elevation,
-        $online,
-        $metasite,
-        $longitude,
-        $latitude,
-        $station,
-        $network
+    $stname = iem_pg_prepare(
+        $pgconn,
+        <<<EOM
+    UPDATE stations SET synop = null, country = $1, 
+    plot_name = $2, name = $3, state = $4, elevation = $5, 
+    online = $6, metasite = $7, tzname = null, ncdc81 = null,
+    climate_site = null, county = null, ugc_county = null, ugc_zone = null,
+    geom = ST_POINT($8, $9, 4326), ncei91 = null
+    WHERE id = $10 and network = $11
+EOM
     );
-    $rs = pg_exec($pgconn, $sql);
+    $rs = pg_execute(
+        $pgconn,
+        $stname,
+        array(
+            $country,
+            $sname,
+            $sname,
+            $state,
+            $elevation,
+            $online,
+            $metasite,
+            $longitude,
+            $latitude,
+            $station,
+            $network,
+        )
+    );
     if (pg_affected_rows($rs) != 1) {
         $msg .= "<h3>DATABASE FAILURE!";
     }
 }
 
-/* Search for station */
-$sql = sprintf(
-    "SELECT *, ST_y(geom) as y, ST_x(geom) as x from stations 
-        WHERE id = '%s' and network = '%s'",
+$stname = iem_pg_prepare(
+    $pgconn,
+    <<<EOM
+    SELECT *, ST_y(geom) as y, ST_x(geom) as x from stations 
+    WHERE id = $1 and network = $2
+EOM
+);
+$rs = pg_execute($pgconn, $stname, array(
     $station,
     $network
-);
-$rs = pg_exec($pgconn, $sql);
+));
 if (pg_num_rows($rs) == 1) {
     $row = pg_fetch_assoc($rs, 0);
     $elevation = $row['elevation'];
@@ -117,6 +134,10 @@ if (pg_num_rows($rs) == 1) {
     $country = $row["country"];
     $state = $row["state"];
 }
+// Invalidate the memcache entry for /sites/$network/$station
+$memcache = new Memcached();
+$memcache->addServer("iem-memcached", 11211);
+$memcache->delete("/sites/{$network}/{$station}");
 
 ?>
 <html>
@@ -188,7 +209,6 @@ if (pg_num_rows($rs) == 1) {
     <hr />
 
     <?php echo $msg; ?>
-
 
 </body>
 
