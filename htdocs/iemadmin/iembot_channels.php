@@ -1,51 +1,76 @@
-<?php 
+<?php
 require_once '/opt/iem/config/settings.inc.php';
 require_once "/opt/iem/include/database.inc.php";
-$dbconn = iemdb("mesosite");
+$dbconn = iemdb("iembot");
 
-$rs = pg_prepare($dbconn, "ADDSUB", "INSERT into iembot_room_subscriptions
-                 (roomname, channel) VALUES ($1,$2)");
-$rs = pg_prepare($dbconn, "DELSUB", "DELETE from iembot_room_subscriptions
-                WHERE roomname = $1 and channel = $2");
-$rs = pg_prepare($dbconn, "SELECTSUBS", "SELECT c.* from
-                 iembot_room_subscriptions s, iembot_channels c
-                 WHERE s.roomname = $1 and c.id = s.channel 
-                 ORDER by channel ASC");
-$rs = pg_prepare($dbconn, "SELECTCHANNELS", "SELECT * from
-                 iembot_channels WHERE id NOT IN
-                   (SELECT channel from
-                    iembot_room_subscriptions WHERE roomname = $1)
-                 and id ~* $2
-                 ORDER by id ASC LIMIT $3 OFFSET $4");
+$st_addsub = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    insert into iembot_subscriptions(iembot_account_id, channel_id)
+    values (
+        (select iembot_account_id from iembot_rooms where roomname = $1),
+        (select get_or_create_iembot_channel_id($2)
+    ) on conflict do nothing
+EOM
+);
+$st_delsub = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    DELETE from iembot_subscriptions
+                WHERE iembot_account_id = (
+        select iembot_account_id from iembot_rooms where roomname = $1
+    ) and channel_id = (select get_or_create_iembot_channel_id($2))
+EOM
+);
+$st_selectsubs = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    select c.channel_name from iembot_channels c JOIN iembot_subscriptions s
+    on (c.channel_id = s.channel_id) WHERE s.iembot_account_id = (
+        select iembot_account_id from iembot_rooms where roomname = $1
+    ) ORDER by c.channel_name ASC
+EOM
+);
+$st_selectchannels = pg_prepare(
+    $dbconn,
+    <<<EOM
+    SELECT c.channel_name from iembot_channels ORDER by c.channel_name ASC
+EOM
+);
 
 
-if (isset($_REQUEST["mode"]) && $_REQUEST["mode"] == "remove"){
-    pg_execute($dbconn, "DELSUB", Array($_REQUEST["chatroom"],
-                                    $_REQUEST["channel"]));
+if (isset($_REQUEST["mode"]) && $_REQUEST["mode"] == "remove") {
+    pg_execute($dbconn, $st_delsub, array(
+        $_REQUEST["chatroom"],
+        $_REQUEST["channel"]
+    ));
     die(0);
 }
-if (isset($_REQUEST["mode"]) && $_REQUEST["mode"] == "add"){
-    pg_execute($dbconn, "ADDSUB", Array($_REQUEST["chatroom"],
-                                    $_REQUEST["channel"]));
+if (isset($_REQUEST["mode"]) && $_REQUEST["mode"] == "add") {
+    pg_execute($dbconn, $st_addsub, array(
+        $_REQUEST["chatroom"],
+        $_REQUEST["channel"]
+    ));
     die(0);
 }
 
-if (isset($_REQUEST["mode"]) && $_REQUEST["mode"] == "subs"){
-    $rs = pg_execute($dbconn, "SELECTSUBS", Array($_REQUEST["chatroom"]));
+if (isset($_REQUEST["mode"]) && $_REQUEST["mode"] == "subs") {
+    $rs = pg_execute($dbconn, $st_selectsubs, array($_REQUEST["chatroom"]));
     $total = pg_num_rows($rs);
-}
-else {
-    $rs = pg_execute($dbconn, "SELECTCHANNELS", Array($_REQUEST["chatroom"],
-                            $_REQUEST["query"], $_REQUEST["limit"],
-                            $_REQUEST["start"]));
-    $rs2 = pg_execute($dbconn, "SELECTCHANNELS", Array($_REQUEST["chatroom"],
-                            $_REQUEST["query"], 100000, 0));
+} else {
+    $rs = pg_execute($dbconn, $st_selectchannels, array(
+        $_REQUEST["chatroom"],
+        $_REQUEST["query"],
+        $_REQUEST["limit"],
+        $_REQUEST["start"]
+    ));
+    $rs2 = pg_execute($dbconn, $st_selectchannels, array());
     $total = pg_num_rows($rs2);
 }
-$ar = Array("channels" => Array() , "totalCount" => $total);
+$ar = array("channels" => array(), "totalCount" => $total);
 
-for ($i=0;$row=pg_fetch_array($rs);$i++){
-    $z = Array("id" => $row["id"], "text" => $row["name"]);
+for ($i = 0; $row = pg_fetch_array($rs); $i++) {
+    $z = array("id" => $row["id"], "text" => $row["channel_name"]);
     $ar["channels"][] = $z;
 }
 

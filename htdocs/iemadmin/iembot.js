@@ -106,11 +106,4 @@ Ext.onReady(function () {
             { name: 'text', mapping: 'text' }
         ])
     });
-
-
-
-
-
-
-
 });

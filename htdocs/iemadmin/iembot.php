@@ -4,22 +4,48 @@ require_once "/opt/iem/include/database.inc.php";
 require_once "../../include/myview.php";
 $t = new MyView();
 
-$dbconn = iemdb("mesosite");
+$dbconn = iemdb("iembot");
 
-$rs = pg_prepare($dbconn, "SELECTROOMS", "SELECT * from iembot_rooms 
-                 WHERE roomname NOT IN ('allpeopletalk', 'botstalk')
-                 ORDER by roomname ASC");
-$rs = pg_prepare($dbconn, "SELECTROOM", "SELECT * from iembot_rooms
-                 WHERE roomname = $1");
-$rs = pg_prepare($dbconn, "CREATEROOM", "insert into iembot_rooms
-                 (roomname) values ($1)");
-$rs = pg_prepare($dbconn, "DELETEROOM", "DELETE from iembot_rooms WHERE
-                 roomname = $1");
-$rs = pg_prepare($dbconn, "DELETESUBS", "DELETE from iembot_room_subscriptions
-                 WHERE roomname = $1"); 
-$rs = pg_prepare($dbconn, "ADDCHANNEL", "INSERT into iembot_channels
-                 (id, name) values ($1,$2)");
-
+$st_selectrooms = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    SELECT * from iembot_rooms 
+    WHERE roomname NOT IN ('allpeopletalk', 'botstalk')
+    ORDER by roomname ASC
+EOM
+);
+$st_selectroom = iem_pg_prepare(
+    $dbconn, 
+    <<<EOM
+    SELECT * from iembot_rooms WHERE roomname = $1
+EOM
+);
+$st_createroom = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    insert into iembot_rooms (iembot_account_id, roomname)
+    values ((select get_or_create_iembot_account_id('xmpp')), $1)
+EOM
+);
+$st_deleteroom = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    DELETE from iembot_rooms WHERE roomname = $1
+EOM
+);
+$st_deletesubs = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    DELETE from iembot_subscriptions s JOIN iembot_rooms r
+    ON (s.iembot_account_id = r.iembot_account_id) WHERE r.roomname = $1
+EOM
+);
+$st_addchannel = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    select get_or_create_iembot_channel_id($1)
+EOM
+);
 
 $room = isset($_REQUEST["room"]) ? $_REQUEST["room"]: "";
 $channel = isset($_REQUEST["channel"]) ? $_REQUEST["channel"]: "";
@@ -35,33 +61,32 @@ function reloadbot(){
 
 
 if ($action == "delete" && $room != ""){
-  pg_execute($dbconn, "DELETEROOM", Array($room));
-  pg_execute($dbconn, "DELETESUBS", Array($room));
+  pg_execute($dbconn, $st_deleteroom, Array($room));
+  pg_execute($dbconn, $st_deletesubs, Array($room));
   reloadbot();
   $alertMsg = "Deleted roomname ($room) and reloaded iembot";
 }
 
 if ($action == "add" && $room != ""){
   /* Add a new room to the bot! */
-  pg_execute($dbconn, "CREATEROOM", Array($room));
+  pg_execute($dbconn, $st_createroom, Array($room));
   reloadbot();
   $alertMsg = "Created roomname ($room) and reloaded iembot";
 }
 
 if ($action == "addchannel" && $channel != ""){
-    pg_execute($dbconn, "ADDCHANNEL", Array($channel, $name));
+    pg_execute($dbconn, $st_addchannel, Array($channel, $name));
     $alertMsg = "Channel ID: $channel added";
 }
 
-
-/* BEGIN WEB OUTPUT PLEASE */
-$t->headextra = '<link rel="stylesheet" type="text/css" 
+$t->headextra = <<<EOM
+<link rel="stylesheet" type="text/css" 
     href="/vendor/ext/3.4.1/resources/css/ext-all.css"/>
 <script type="text/javascript" src="/vendor/ext/3.4.1/adapter/ext/ext-base.js"></script>
 <script type="text/javascript" src="/vendor/ext/3.4.1/ext-all.js"></script>
 <script type="text/javascript">
 Ext.ns("App");
-App.roomname = "'. $room .'";
+App.roomname = "{$room}";
 </script>
 <style>
 .search-item {
@@ -84,7 +109,7 @@ App.roomname = "'. $room .'";
     clear:none;
 }
 </style>
-';
+EOM;
 
 $c = "";
 if ($room != "" && $action != "delete"){
