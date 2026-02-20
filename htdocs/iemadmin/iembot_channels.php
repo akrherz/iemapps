@@ -34,7 +34,7 @@ EOM
 $st_selectchannels = iem_pg_prepare(
     $dbconn,
     <<<EOM
-    SELECT c.channel_name from iembot_channels ORDER by c.channel_name ASC
+    SELECT c.channel_name from iembot_channels c ORDER by c.channel_name ASC
 EOM
 );
 
