@@ -25,7 +25,7 @@ EOM
 $st_selectsubs = iem_pg_prepare(
     $dbconn,
     <<<EOM
-    select c.channel_name from iembot_channels c JOIN iembot_subscriptions s
+    select c.id, c.channel_name from iembot_channels c JOIN iembot_subscriptions s
     on (c.id = s.channel_id) WHERE s.iembot_account_id = (
         select iembot_account_id from iembot_rooms where roomname = $1
     ) ORDER by c.channel_name ASC
@@ -34,7 +34,14 @@ EOM
 $st_selectchannels = iem_pg_prepare(
     $dbconn,
     <<<EOM
-    SELECT c.channel_name from iembot_channels c ORDER by c.channel_name ASC
+    SELECT c.id, c.channel_name from iembot_channels c ORDER by c.channel_name ASC
+EOM
+);
+$st_availchannels = iem_pg_prepare(
+    $dbconn,
+    <<<EOM
+    SELECT c.id, c.channel_name from iembot_channels c
+    where channel_name ~* $1 ORDER by c.channel_name ASC LIMIT $2 OFFSET $3
 EOM
 );
 
@@ -58,8 +65,7 @@ if (isset($_REQUEST["mode"]) && $_REQUEST["mode"] == "subs") {
     $rs = pg_execute($dbconn, $st_selectsubs, array($_REQUEST["chatroom"]));
     $total = pg_num_rows($rs);
 } else {
-    $rs = pg_execute($dbconn, $st_selectchannels, array(
-        $_REQUEST["chatroom"],
+    $rs = pg_execute($dbconn, $st_availchannels, array(
         $_REQUEST["query"],
         $_REQUEST["limit"],
         $_REQUEST["start"]

@@ -75,7 +75,7 @@ if ($action == "add" && $room != ""){
 }
 
 if ($action == "addchannel" && $channel != ""){
-    pg_execute($dbconn, $st_addchannel, Array($channel, $name));
+    pg_execute($dbconn, $st_addchannel, Array($channel));
     $alertMsg = "Channel ID: $channel added";
 }
 
