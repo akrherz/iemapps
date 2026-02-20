@@ -24,7 +24,7 @@ $st_createroom = iem_pg_prepare(
     $dbconn,
     <<<EOM
     insert into iembot_rooms (iembot_account_id, roomname)
-    values ((select get_or_create_iembot_account_id('xmpp')), $1)
+    values ((select create_iembot_account('xmpp')), $1)
 EOM
 );
 $st_deleteroom = iem_pg_prepare(
