@@ -36,8 +36,8 @@ EOM
 $st_deletesubs = iem_pg_prepare(
     $dbconn,
     <<<EOM
-    DELETE from iembot_subscriptions s JOIN iembot_rooms r
-    ON (s.iembot_account_id = r.iembot_account_id) WHERE r.roomname = $1
+    DELETE from iembot_subscriptions s USING iembot_rooms r
+    where s.iembot_account_id = r.iembot_account_id and r.roomname = $1
 EOM
 );
 $st_addchannel = iem_pg_prepare(
@@ -160,7 +160,7 @@ if ($room != "" && $action != "delete"){
 }
 
 $table = "";
-$rs = pg_execute($dbconn, "SELECTROOMS", Array());
+$rs = pg_execute($dbconn, $st_selectrooms, Array());
 for ($i=0;$row=pg_fetch_array($rs);$i++){
     if ($i % 8 == 0) $table .= "</tr><tr>";
     $table .= sprintf("<td><a href=\"iembot.php?action=edit&room=%s\">%s</a></td>",

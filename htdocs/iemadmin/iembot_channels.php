@@ -9,7 +9,7 @@ $st_addsub = iem_pg_prepare(
     insert into iembot_subscriptions(iembot_account_id, channel_id)
     values (
         (select iembot_account_id from iembot_rooms where roomname = $1),
-        (select get_or_create_iembot_channel_id($2)
+        (select get_or_create_iembot_channel_id($2))
     ) on conflict do nothing
 EOM
 );
@@ -26,7 +26,7 @@ $st_selectsubs = iem_pg_prepare(
     $dbconn,
     <<<EOM
     select c.channel_name from iembot_channels c JOIN iembot_subscriptions s
-    on (c.channel_id = s.channel_id) WHERE s.iembot_account_id = (
+    on (c.id = s.channel_id) WHERE s.iembot_account_id = (
         select iembot_account_id from iembot_rooms where roomname = $1
     ) ORDER by c.channel_name ASC
 EOM
