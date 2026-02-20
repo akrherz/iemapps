@@ -31,7 +31,7 @@ $st_selectsubs = iem_pg_prepare(
     ) ORDER by c.channel_name ASC
 EOM
 );
-$st_selectchannels = pg_prepare(
+$st_selectchannels = iem_pg_prepare(
     $dbconn,
     <<<EOM
     SELECT c.channel_name from iembot_channels ORDER by c.channel_name ASC
