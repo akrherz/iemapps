@@ -1,10 +1,9 @@
 <?php
-// Need session to track state
-
 use Html2Text\Html2Text;
 
+// Need session to track state
 session_start();
-/* Web based feature publisher */
+
 require_once "/opt/iem/config/settings.inc.php";
 require_once "/opt/iem/include/database.inc.php";
 require_once "/opt/iem/include/forms.php";
@@ -15,24 +14,25 @@ require_once "../../include/Facebook/autoload.php";
 $msgs = array();
 
 define("TOKEN_NAME", "iem_facebook_access_token");
-$mesosite = iemdb("mesosite", TRUE, TRUE);
-pg_prepare($mesosite, "SELECTOR", "select valid from feature WHERE " .
+$mesosite = iemdb("mesosite");
+$st_selector = iem_pg_prepare($mesosite, "select valid from feature WHERE " .
     "date(valid) = $1");
-pg_prepare($mesosite, "DELETOR", "DELETE from feature WHERE " .
+$st_deletor = iem_pg_prepare($mesosite, "DELETE from feature WHERE " .
     "date(valid) = $1");
-pg_prepare($mesosite, "INJECTOR", "INSERT into feature " .
+$st_injector = iem_pg_prepare($mesosite, "INSERT into feature " .
     "(valid, title, story, caption, voting, tags, fbid, appurl, " .
     "javascripturl, mediasuffix, media_height, media_width) VALUES " .
     "($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)");
-pg_prepare($mesosite, "UPDATOR", "UPDATE feature SET fbid = $1 WHERE " .
+$st_updator = iem_pg_prepare($mesosite, "UPDATE feature SET fbid = $1 WHERE " .
     "date(valid) = $2");
-pg_prepare($mesosite, "GET_AT", "SELECT propvalue from properties WHERE " .
+$st_get_at = iem_pg_prepare($mesosite, "SELECT propvalue from properties WHERE " .
     "propname = $1");
-pg_prepare($mesosite, "INSERT_AT", "INSERT into properties(propname, " .
+$st_insert_at = iem_pg_prepare($mesosite, "INSERT into properties(propname, " .
     "propvalue) VALUES ($1, $2)");
-pg_prepare($mesosite, "DELETE_AT", "DELETE from properties WHERE " .
+$st_delete_at = iem_pg_prepare($mesosite, "DELETE from properties WHERE " .
     "propname = $1");
 
+global $fb_feature_secret;
 $fb = new \Facebook\Facebook([
     'app_id' => '148705700931',
     'app_secret' => $fb_feature_secret,
@@ -45,7 +45,7 @@ $callback = 'https://iemapps.agron.iastate.edu/iemadmin/feature.php';
 $loginUrl = $helper->getLoginUrl($callback, $permissions);
 
 // Do we have a token in the database?
-$rs = pg_execute($mesosite, "GET_AT", array(TOKEN_NAME));
+$rs = pg_execute($mesosite, $st_get_at, array(TOKEN_NAME));
 if (pg_num_rows($rs) == 0) {
     $accessToken = null;
 } else {
@@ -69,7 +69,7 @@ try {
     if ($res) {
         $accessToken = $res;
         $msgs[] = "Saving acccess_token to database.";
-        pg_execute($mesosite, "INSERT_AT", array(TOKEN_NAME, $accessToken));
+        pg_execute($mesosite, $st_insert_at, array(TOKEN_NAME, $accessToken));
         $fb->setDefaultAccessToken($accessToken);
     }
 } catch (Facebook\Exceptions\FacebookSDKException $e) {
@@ -110,7 +110,7 @@ if (!is_null($story) && !is_null($title)) {
     $publish_at = new DateTime($at_str, new DateTimeZone("America/Chicago"));
 
     // Abort if we already have an entry, too painful.
-    $res = pg_execute($mesosite, "SELECTOR", array($publish_at->format('Y-m-d')));
+    $res = pg_execute($mesosite, $st_selector, array($publish_at->format('Y-m-d')));
     if (pg_num_rows($res) !== 0){
         die("Database entry already exists!");
     }
@@ -126,10 +126,10 @@ if (!is_null($story) && !is_null($title)) {
     );
     // Here's the rub, Facebook wants to visit the permalink above to scrape content
     // So we need to get this info into the database before we tell facebook about it
-    pg_execute($mesosite, "DELETOR", array($publish_at->format('Y-m-d')));
+    pg_execute($mesosite, $st_deletor, array($publish_at->format('Y-m-d')));
     pg_execute(
         $mesosite,
-        "INJECTOR",
+        $st_injector,
         array(
             $publish_at->format("Y-m-d H:i:s"), $title, $story, $caption,
             $voting, $tags, null, $appurl, $javascripturl,
@@ -158,25 +158,28 @@ if (!is_null($story) && !is_null($title)) {
                 "name" => "IEM Generator App",
             ));
         }
+        $story_fbid = null;
         try {
             // Get a page access token to use
             $response = $fb->get('/157789644737?fields=access_token');
             $fbid = $response->getGraphNode();
             $response = $fb->post('/157789644737/feed', $data, $fbid["access_token"]);
             $fbid = $response->getGraphNode();
+            $story_fbid = explode("_", $fbid['id']);
+            $story_fbid = $story_fbid[1];
         } catch (Facebook\Exceptions\FacebookSDKException $e) {
             // There was an error communicating with Graph
             $msgs[] = "Error: " . $e->getMessage();
         }
-        $story_fbid = explode("_", $fbid['id']);
-        $story_fbid = $story_fbid[1];
-        $msgs[] = sprintf(
-            "Facebook <a href=\"https://www.facebook.com/" .
-                "permalink.php?story_fbid=%s&id=157789644737\">post created</a>.",
-            $story_fbid
-        );
+        if ($story_fbid) {
+            $msgs[] = sprintf(
+                "Facebook <a href=\"https://www.facebook.com/" .
+                    "permalink.php?story_fbid=%s&id=157789644737\">post created</a>.",
+                $story_fbid
+            );
 
-        pg_execute($mesosite, "UPDATOR", array($story_fbid, $publish_at->format('Y-m-d')));
+            pg_execute($mesosite, $st_updator, array($story_fbid, $publish_at->format('Y-m-d')));
+        }
     }
 }
 
