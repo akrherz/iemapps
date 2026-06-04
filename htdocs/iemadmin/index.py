@@ -12,6 +12,7 @@ PAGE = """
 <ul>
     <li><a href="add_news.phtml">Add a news item</a></li>
     <li><a href="add_site.phtml">Add a mesosite station...</a></li>
+    <li><a href="/iemadmin/iemapps/">IEMApps Database Editor</a></li>
     <li><a href="feature.php">IEM Feature Editor</a></li>
     <li><a href="props.phtml">IEM Properties Editor</a></li>
     <li><a href="iembot.php">IEMBot Room/Channel Config</a></li>
