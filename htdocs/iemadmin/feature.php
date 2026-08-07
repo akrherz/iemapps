@@ -15,6 +15,10 @@ $msgs = array();
 
 define("TOKEN_NAME", "iem_facebook_access_token");
 $mesosite = iemdb("mesosite");
+$st_titlecheck = iem_pg_prepare(
+    $mesosite,
+    "select valid from feature where title = $1",
+);
 $st_selector = iem_pg_prepare($mesosite, "select valid from feature WHERE " .
     "date(valid) = $1");
 $st_deletor = iem_pg_prepare($mesosite, "DELETE from feature WHERE " .
@@ -113,6 +117,12 @@ if (!is_null($story) && !is_null($title)) {
     $res = pg_execute($mesosite, $st_selector, array($publish_at->format('Y-m-d')));
     if (pg_num_rows($res) !== 0){
         die("Database entry already exists!");
+    }
+
+    // Preflight check the title
+    $res = pg_execute($mesosite, $st_titlecheck, array($title));
+    if (pg_num_rows($res) !== 0){
+        die("Abort as title is not unique!");
     }
 
     $permalink = sprintf(
