@@ -33,7 +33,7 @@ $table = "<table class='table table-striped'>
 
 for($i=0;$row=pg_fetch_assoc($rs);$i++){
 	$uri = sprintf("props.phtml?del=%s", $row["propname"]);
- $table .= sprintf("<tr><td><a href='%s'>X</a></td><td>%s</td><td>%s</td></tr>\n", 
+ $table .= sprintf("<tr><td><a href='%s'>X</a></td><td>%s</td><td>%s</td></tr>\n",
  		$uri, $row["propname"], $row["propvalue"]);
 }
 $table .= "</table>";

@@ -82,8 +82,8 @@ EOM
     $stname = iem_pg_prepare(
         $pgconn,
         <<<EOM
-    UPDATE stations SET synop = null, country = $1, 
-    plot_name = $2, name = $3, state = $4, elevation = $5, 
+    UPDATE stations SET synop = null, country = $1,
+    plot_name = $2, name = $3, state = $4, elevation = $5,
     online = $6, metasite = $7, tzname = null, ncdc81 = null,
     climate_site = null, county = null, ugc_county = null, ugc_zone = null,
     geom = ST_POINT($8, $9, 4326), ncei91 = null
@@ -115,7 +115,7 @@ EOM
 $stname = iem_pg_prepare(
     $pgconn,
     <<<EOM
-    SELECT *, ST_y(geom) as y, ST_x(geom) as x from stations 
+    SELECT *, ST_y(geom) as y, ST_x(geom) as x from stations
     WHERE id = $1 and network = $2
 EOM
 );
