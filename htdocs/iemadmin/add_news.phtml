@@ -14,7 +14,7 @@ $tags = isset($_REQUEST["tags"]) ? explode(",", $_REQUEST["tags"]) : array();
 $msg = "";
 if (strlen($title) > 0) {
     $conn = iemdb("mesosite");
-    $stname = iem_pg_prepare($conn, "INSERT into 
+    $stname = iem_pg_prepare($conn, "INSERT into
        news(body, author, title, url, tags) VALUES ($1,$2,$3,$4, $5)");
     $rs = pg_execute($conn, $stname, array(
         str_replace("\r", "", $body),

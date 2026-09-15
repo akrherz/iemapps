@@ -9,13 +9,13 @@ $dbconn = iemdb("iembot");
 $st_selectrooms = iem_pg_prepare(
     $dbconn,
     <<<EOM
-    SELECT * from iembot_rooms 
+    SELECT * from iembot_rooms
     WHERE roomname NOT IN ('allpeopletalk', 'botstalk')
     ORDER by roomname ASC
 EOM
 );
 $st_selectroom = iem_pg_prepare(
-    $dbconn, 
+    $dbconn,
     <<<EOM
     SELECT * from iembot_rooms WHERE roomname = $1
 EOM
@@ -80,7 +80,7 @@ if ($action == "addchannel" && $channel != ""){
 }
 
 $t->headextra = <<<EOM
-<link rel="stylesheet" type="text/css" 
+<link rel="stylesheet" type="text/css"
     href="/vendor/ext/3.4.1/resources/css/ext-all.css"/>
 <script type="text/javascript" src="/vendor/ext/3.4.1/adapter/ext/ext-base.js"></script>
 <script type="text/javascript" src="/vendor/ext/3.4.1/ext-all.js"></script>
